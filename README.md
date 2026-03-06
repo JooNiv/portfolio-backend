@@ -39,7 +39,6 @@ docker compose up --build
 #### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install)
-- [Docker](https://docs.docker.com/get-docker/)
 - [PostgreSQL](https://www.postgresql.org/download/)
 
 #### Setup
