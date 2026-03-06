@@ -1,6 +1,6 @@
 # Portfolio Backend
 
-A Rust backend service for managing notes, using PostgreSQL and Docker.
+A Rust backend service for managing notes, using Rust, Salvo, PosgreSQL and Docker.
 
 ## Features
 
