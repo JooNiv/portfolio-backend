@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS notes (
+    id SERIAL PRIMARY KEY,
+    author TEXT NOT NULL,
+    content TEXT NOT NULL
+);
