@@ -11,12 +11,12 @@ use salvo::prelude::*;
 use salvo_cors::{AllowHeaders, AllowOrigin, Cors};
 use salvo_jwt_auth::{ConstDecoder, QueryFinder};
 use salvo_jwt_auth::{HeaderFinder, JwtAuth};
+use salvo_rate_limiter::{BasicQuota, FixedGuard, MokaStore, RateLimiter, RemoteIpIssuer};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use std::sync::OnceLock;
 use time::{Duration, OffsetDateTime};
-use tracing::{info, warn, error, debug};
-
+use tracing::{debug, error, info, warn};
 
 static POSTGRES: OnceLock<PgPool> = OnceLock::new();
 
@@ -41,14 +41,13 @@ fn validate_user(username: &str, password: &str) -> bool {
         Ok(_) => {
             info!("User '{}' authenticated successfully", username);
             true
-        },
+        }
         Err(_) => {
             warn!("Password verification failed for user '{}'", username);
             false
-        },
+        }
     }
 }
-
 
 // Helper function to get the PostgreSQL connection pool
 #[inline]
@@ -132,7 +131,10 @@ async fn login(req: &mut Request, res: &mut Response) {
 
 #[handler]
 async fn check_token(req: &mut Request, res: &mut Response) {
-    let auth_header = req.headers().get("Authorization").and_then(|h| h.to_str().ok());
+    let auth_header = req
+        .headers()
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok());
     if let Some(token) = auth_header.and_then(|h| h.strip_prefix("Bearer ")) {
         let secret = get_secret_key();
         let validation = jsonwebtoken::Validation::default();
@@ -157,7 +159,6 @@ async fn check_token(req: &mut Request, res: &mut Response) {
         res.render(Text::Plain("Missing or invalid Authorization header"));
     }
 }
-
 
 #[handler]
 async fn add_note(req: &mut Request, res: &mut Response) {
@@ -274,6 +275,14 @@ async fn main() {
     dotenv().ok();
 
     tracing_subscriber::fmt().init();
+
+    let limiter = RateLimiter::new(
+        FixedGuard::default(),
+        MokaStore::<std::net::IpAddr, FixedGuard>::default(),
+        RemoteIpIssuer,
+        BasicQuota::per_minute(100),
+    );
+
     info!("Logging initialized");
 
     let secret = get_secret_key().to_string();
@@ -305,6 +314,7 @@ async fn main() {
 
     let router = Router::new()
         .hoop(cors)
+        .hoop(limiter)
         .push(
             Router::with_path("/login")
                 .post(login)
