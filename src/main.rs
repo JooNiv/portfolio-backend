@@ -165,6 +165,17 @@ async fn add_note(req: &mut Request, res: &mut Response) {
     let new_note = req.parse_json::<NewNote>().await;
     match new_note {
         Ok(note) => {
+            if note.author.trim().is_empty() || note.content.trim().is_empty() {
+                warn!("Empty author or content in note submission");
+                res.status_code(StatusCode::BAD_REQUEST);
+                res.render(Text::Plain("Author and content cannot be empty"));
+                return;
+            } else if note.author.len() > 10 || note.content.len() > 30 {
+                warn!("Author or content too long in note submission");
+                res.status_code(StatusCode::BAD_REQUEST);
+                res.render(Text::Plain("Author or content too long"));
+                return;
+            }
             info!("Adding note by '{}'", note.author);
             let inserted_note = sqlx::query_as::<_, Note>(
                 "INSERT INTO notes (author, content) VALUES ($1, $2) RETURNING id, author, content",
@@ -301,18 +312,33 @@ async fn main() {
     let pool = PgPool::connect(&postgres_uri).await.unwrap();
     POSTGRES.set(pool).unwrap();
 
-    let cors = Cors::new()
-        .allow_origin([
-            "https://jooniv.fi",
+    let mode = std::env::var("MODE").unwrap_or_else(|_| "development".to_string());
+
+    info!("Server running in '{}' mode", mode);
+
+    let cors = if mode == "production" {
+        Cors::new()
+            .allow_origin(["https://jooniv.fi"])
+            .allow_methods(vec![
+                Method::GET,
+                Method::POST,
+                Method::DELETE,
+                Method::OPTIONS,
             ])
-        .allow_methods(vec![
-            Method::GET,
-            Method::POST,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers(AllowHeaders::any())
-        .into_handler();
+            .allow_headers(AllowHeaders::any())
+            .into_handler()
+    } else {
+        Cors::new()
+            .allow_origin(AllowOrigin::any())
+            .allow_methods(vec![
+                Method::GET,
+                Method::POST,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers(AllowHeaders::any())
+            .into_handler()
+    };
 
     let router = Router::new()
         .hoop(cors)
