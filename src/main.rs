@@ -302,7 +302,9 @@ async fn main() {
     POSTGRES.set(pool).unwrap();
 
     let cors = Cors::new()
-        .allow_origin(AllowOrigin::any())
+        .allow_origin([
+            "https://jooniv.fi",
+            ])
         .allow_methods(vec![
             Method::GET,
             Method::POST,
