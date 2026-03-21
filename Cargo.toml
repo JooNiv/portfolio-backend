@@ -13,7 +13,7 @@ openssl-sys = "0.9.112"
 rand = "0.10.0"
 salvo = {version = "0.89.2", featues = ["cors", "jwt-auth", "anyhow", "rate-limiter"]}
 salvo-cors = "0.89.2"
-salvo-jwt-auth = "0.89.2"
+salvo-jwt-auth = "0.89.3"
 salvo-rate-limiter = "0.89.2"
 serde = "1.0.228"
 serde_json = "1.0.149"
